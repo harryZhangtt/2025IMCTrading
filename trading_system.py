@@ -217,12 +217,19 @@ class MarketMakingStrategy(Strategy):
     def load(self, data: JSON) -> None:
         self.window = deque(data)
 
-class KelpStrategy(MarketMakingStrategy):
-    def get_true_value(self, state: TradingState) -> int:
-        return 2_026  # Adjusted true value for KELP
-
-
 class RainforestResinStrategy(MarketMakingStrategy):
+     def get_true_value(self, state: TradingState) -> int:
+        order_depth = state.order_depths[self.symbol]
+        buy_orders = sorted(order_depth.buy_orders.items(), reverse=True)
+        sell_orders = sorted(order_depth.sell_orders.items())
+
+        popular_buy_price = max(buy_orders, key=lambda tup: tup[1])[0]
+        popular_sell_price = min(sell_orders, key=lambda tup: tup[1])[0]
+
+        return round((popular_buy_price + popular_sell_price) / 2)
+
+
+class KelpStrategy(MarketMakingStrategy):
     def get_true_value(self, state: TradingState) -> int:
         order_depth = state.order_depths[self.symbol]
         buy_orders = sorted(order_depth.buy_orders.items(), reverse=True)
@@ -237,8 +244,8 @@ class RainforestResinStrategy(MarketMakingStrategy):
 class Trader:
     def __init__(self) -> None:
         limits = {
-            "KELP": 20,
-            "RAINFOREST_RESIN": 20,
+            "KELP": 50,
+            "RAINFOREST_RESIN": 50,
         }
 
         self.strategies = {symbol: clazz(symbol, limits[symbol]) for symbol, clazz in {
