@@ -225,99 +225,38 @@ class MarketMakingStrategy(Strategy):
         self.window = deque(data)
 
 class RainforestResinStrategy(MarketMakingStrategy):
-    def __init__(self, symbol: Symbol, limit: int) -> None:
-        super().__init__(symbol, limit)
-        self.order_depth_window = deque(maxlen=10)
-
-    def get_true_value(self, state: TradingState) -> int:
+     def get_true_value(self, state: TradingState) -> int:
         order_depth = state.order_depths[self.symbol]
-        self.order_depth_window.append(order_depth)
+        buy_orders = sorted(order_depth.buy_orders.items(), reverse=True)
+        sell_orders = sorted(order_depth.sell_orders.items())
 
-        avg_buy_price = 0
-        avg_sell_price = 0
-        total_buy_volume = 0
-        total_sell_volume = 0
+        popular_buy_price = max(buy_orders, key=lambda tup: tup[1])[0]
+        popular_sell_price = min(sell_orders, key=lambda tup: tup[1])[0]
 
-        for depth in self.order_depth_window:
-            buy_orders = sorted(depth.buy_orders.items(), reverse=True)
-            sell_orders = sorted(depth.sell_orders.items())
-
-            if buy_orders:
-                avg_buy_price += sum(price * volume for price, volume in buy_orders)
-                total_buy_volume += sum(volume for _, volume in buy_orders)
-
-            if sell_orders:
-                avg_sell_price += sum(price * volume for price, volume in sell_orders)
-                total_sell_volume += sum(volume for _, volume in sell_orders)
-
-        avg_buy_price = avg_buy_price / total_buy_volume if total_buy_volume > 0 else 0
-        avg_sell_price = avg_sell_price / total_sell_volume if total_sell_volume > 0 else 0
-
-        return round((avg_buy_price + avg_sell_price) / 2)
+        return round((popular_buy_price + popular_sell_price) / 2)
 
 
 class KelpStrategy(MarketMakingStrategy):
-    def __init__(self, symbol: Symbol, limit: int) -> None:
-        super().__init__(symbol, limit)
-        self.order_depth_window = deque(maxlen=10)
-
     def get_true_value(self, state: TradingState) -> int:
         order_depth = state.order_depths[self.symbol]
-        self.order_depth_window.append(order_depth)
+        buy_orders = sorted(order_depth.buy_orders.items(), reverse=True)
+        sell_orders = sorted(order_depth.sell_orders.items())
 
-        avg_buy_price = 0
-        avg_sell_price = 0
-        total_buy_volume = 0
-        total_sell_volume = 0
+        popular_buy_price = max(buy_orders, key=lambda tup: tup[1])[0]
+        popular_sell_price = min(sell_orders, key=lambda tup: tup[1])[0]
 
-        for depth in self.order_depth_window:
-            buy_orders = sorted(depth.buy_orders.items(), reverse=True)
-            sell_orders = sorted(depth.sell_orders.items())
+        return round((popular_buy_price + popular_sell_price) / 2)
 
-            if buy_orders:
-                avg_buy_price += sum(price * volume for price, volume in buy_orders)
-                total_buy_volume += sum(volume for _, volume in buy_orders)
-
-            if sell_orders:
-                avg_sell_price += sum(price * volume for price, volume in sell_orders)
-                total_sell_volume += sum(volume for _, volume in sell_orders)
-
-        avg_buy_price = avg_buy_price / total_buy_volume if total_buy_volume > 0 else 0
-        avg_sell_price = avg_sell_price / total_sell_volume if total_sell_volume > 0 else 0
-
-        return round((avg_buy_price + avg_sell_price) / 2)
-
-
-class SquidInkStrategy(MarketMakingStrategy):
-    def __init__(self, symbol: Symbol, limit: int) -> None:
-        super().__init__(symbol, limit)
-        self.order_depth_window = deque(maxlen=10)
-
+class SquidInkStrategy(MarketMakingStrategy): 
     def get_true_value(self, state: TradingState) -> int:
         order_depth = state.order_depths[self.symbol]
-        self.order_depth_window.append(order_depth)
+        buy_orders = sorted(order_depth.buy_orders.items(), reverse=True)
+        sell_orders = sorted(order_depth.sell_orders.items())
 
-        avg_buy_price = 0
-        avg_sell_price = 0
-        total_buy_volume = 0
-        total_sell_volume = 0
+        popular_buy_price = max(buy_orders, key=lambda tup: tup[1])[0]
+        popular_sell_price = min(sell_orders, key=lambda tup: tup[1])[0]
 
-        for depth in self.order_depth_window:
-            buy_orders = sorted(depth.buy_orders.items(), reverse=True)
-            sell_orders = sorted(depth.sell_orders.items())
-
-            if buy_orders:
-                avg_buy_price += sum(price * volume for price, volume in buy_orders)
-                total_buy_volume += sum(volume for _, volume in buy_orders)
-
-            if sell_orders:
-                avg_sell_price += sum(price * volume for price, volume in sell_orders)
-                total_sell_volume += sum(volume for _, volume in sell_orders)
-
-        avg_buy_price = avg_buy_price / total_buy_volume if total_buy_volume > 0 else 0
-        avg_sell_price = avg_sell_price / total_sell_volume if total_sell_volume > 0 else 0
-
-        return round((avg_buy_price + avg_sell_price) / 2)
+        return round((popular_buy_price + popular_sell_price) / 2)
 
 class Trader:
     def __init__(self) -> None:
