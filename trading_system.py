@@ -78,19 +78,27 @@ class Logger:
         return compressed
 
     def compress_observations(self, observations: Observation) -> list[Any]:
+        # Return empty observations for empty or dict input
+        if observations is None or isinstance(observations, dict):
+            return [dict(), dict()]
+        
         conversion_observations = {}
-        for product, observation in observations.conversionObservations.items():
-            conversion_observations[product] = [
-                observation.bidPrice,
-                observation.askPrice,
-                observation.transportFees,
-                observation.exportTariff,
-                observation.importTariff,
-                observation.sunlight,
-                observation.humidity,
-            ]
+        try:
+            for product, observation in observations.conversionObservations.items():
+                conversion_observations[product] = [
+                    observation.bidPrice,
+                    observation.askPrice,
+                    observation.transportFees,
+                    observation.exportTariff,
+                    observation.importTariff,
+                    observation.sunlight,
+                    observation.humidity,
+                ]
+        except AttributeError:
+            # If any attribute access fails, return empty observations
+            return [dict(), dict()]
 
-        return [observations.plainValueObservations, conversion_observations]
+        return [observations.plainValueObservations or dict(), conversion_observations]
 
     def compress_orders(self, orders: dict[Symbol, list[Order]]) -> list[list[Any]]:
         compressed = []
@@ -223,7 +231,7 @@ class MarketMakingStrategy(Strategy):
 
     def load(self, data: JSON) -> None:
         self.window = deque(data)
-
+#the queue order depth is also bad for rainforestresin
 class RainforestResinStrategy(MarketMakingStrategy):
      def get_true_value(self, state: TradingState) -> int:
         order_depth = state.order_depths[self.symbol]
@@ -235,7 +243,7 @@ class RainforestResinStrategy(MarketMakingStrategy):
 
         return round((popular_buy_price + popular_sell_price) / 2)
 
-
+#we try to consider the previous ten timestamp's order depth for kelp, but that is worse
 class KelpStrategy(MarketMakingStrategy):
     def get_true_value(self, state: TradingState) -> int:
         order_depth = state.order_depths[self.symbol]
