@@ -256,6 +256,21 @@ class KelpStrategy(MarketMakingStrategy):
         return round((popular_buy_price + popular_sell_price) / 2)
 
 class SquidInkStrategy(MarketMakingStrategy): 
+    def __init__(self, symbol: Symbol, limit: int) -> None:
+        super().__init__(symbol, limit)
+        self.price_history = deque(maxlen=10)  # Store more than needed for safety
+        self.timestamp_history = deque(maxlen=10)
+        
+    def compute_5dr(self, mid_price: float, timestamp: int) -> float:
+        self.price_history.append(mid_price)
+        self.timestamp_history.append(timestamp)
+        
+        if len(self.price_history) >= 6:
+            prev_close = self.price_history[-2]  # delay=1
+            prev_close_days = self.price_history[-6]  # delay=1 + days=5
+            return 1 - (prev_close / prev_close_days)
+        return 0
+
     def get_true_value(self, state: TradingState) -> int:
         order_depth = state.order_depths[self.symbol]
         buy_orders = sorted(order_depth.buy_orders.items(), reverse=True)
@@ -263,8 +278,35 @@ class SquidInkStrategy(MarketMakingStrategy):
 
         popular_buy_price = max(buy_orders, key=lambda tup: tup[1])[0]
         popular_sell_price = min(sell_orders, key=lambda tup: tup[1])[0]
+        mid_price = (popular_buy_price + popular_sell_price) / 2
 
-        return round((popular_buy_price + popular_sell_price) / 2)
+        # Calculate 5DR adjustment
+        ndr_factor = self.compute_5dr(mid_price, state.timestamp)
+        
+        # Adjust price based on NDR signal
+        # High NDR -> Bearish -> Lower true value to increase sell probability
+        # Low NDR -> Bullish -> Higher true value to increase buy probability
+        if ndr_factor > 0.01:  # Bearish signal
+            true_value = min(popular_sell_price - 1, mid_price * (1 - abs(ndr_factor)))
+        elif ndr_factor < -0.01:  # Bullish signal
+            true_value = max(popular_buy_price + 1, mid_price * (1 + abs(ndr_factor)))
+        else:  # Neutral
+            true_value = mid_price
+            
+        return round(true_value)
+
+    def save(self) -> JSON:
+        return {
+            'window': list(self.window),
+            'price_history': list(self.price_history),
+            'timestamp_history': list(self.timestamp_history)
+        }
+
+    def load(self, data: JSON) -> None:
+        if data:
+            self.window = deque(data['window'])
+            self.price_history = deque(data.get('price_history', []), maxlen=10)
+            self.timestamp_history = deque(data.get('timestamp_history', []), maxlen=10)
 
 class Trader:
     def __init__(self) -> None:
